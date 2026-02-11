@@ -4,11 +4,19 @@ use rand::prelude::*;
 const PLAYER_ROT_SPEED: f32 = 3.5;
 const PLAYER_DAMPING: f32 = 0.985;
 
+//the camera sees 750x1000
+//the world is 4000x4000, meaning there is roughly 3000 pixels of off-screen space that you have to traverse before you see an object loop around
+const WORLD_WIDTH: f32 = 4000.0;
+const WORLD_HEIGHT: f32 = 4000.0;
+
 #[derive(Component)]
 struct Player;
 
 #[derive(Component)]
 struct Asteroid;
+
+#[derive(Component)]
+struct MainCamera;
 
 #[derive(Component)]
 struct MoveSpeed(f32);
@@ -17,34 +25,40 @@ struct MoveSpeed(f32);
 struct Velocity(Vec2);
 
 #[derive(Component)]
-struct WrapsScreen;
+struct WrapsAroundCamera;
 
 fn main() {
     let mut app = App::new();
-        app.add_plugins(DefaultPlugins.set(WindowPlugin {
-            primary_window: Some(Window {
-                title: "Sinirust".into(),
-                resolution: (750, 1000).into(),
-                resizable: false,
-                ..default()
-            }),
+    app.add_plugins(DefaultPlugins.set(WindowPlugin {
+        primary_window: Some(Window {
+            title: "Sinirust".into(),
+            resolution: (750, 1000).into(),
+            resizable: false,
             ..default()
-        }))
-        .add_systems(Startup, setup)
-        .add_systems(Update, (player_input, apply_velocity, wrap_around))
-        .run();
+        }),
+        ..default()
+    }))
+    .add_systems(Startup, setup)
+    .add_systems(
+        Update,
+        (
+            player_input,
+            apply_velocity,
+            camera_follow,
+            wrap_around_camera,
+        )
+        .chain(),
+    )
+    .run();
 }
 
 fn setup(mut commands: Commands) {
-    //camera
-    commands.spawn(Camera2d);
+    commands.spawn((Camera2d, MainCamera));
 
-    //player
     commands.spawn((
         Player,
         MoveSpeed(300.0),
         Velocity(Vec2::ZERO),
-        WrapsScreen,
         Sprite {
             color: Color::srgb(0.2, 0.8, 0.3),
             custom_size: Some(Vec2::new(32.0, 32.0)),
@@ -58,16 +72,21 @@ fn setup(mut commands: Commands) {
 
     let mut rng = rand::rng();
 
-    //'roids
-    for _i in 1..6 {
-        let p_x: f32 = rng.random_range(-375.0..375.0);
-        let p_y: f32 = rng.random_range(-500.0..500.0);
-        let v_x: f32 = rng.random_range(-45.0..45.0);
-        let v_y: f32 = rng.random_range(-45.0..45.0);
+    //asteroid spawner
+    for _i in 0..100 {
+        let half_w = WORLD_WIDTH / 2.0;
+        let half_h = WORLD_HEIGHT / 2.0;
+        
+        let p_x: f32 = rng.random_range(-half_w..half_w);
+        let p_y: f32 = rng.random_range(-half_h..half_h);
+        
+        let v_x: f32 = rng.random_range(-20.0..20.0);
+        let v_y: f32 = rng.random_range(-20.0..20.0);
+        
         commands.spawn((
             Asteroid,
             Velocity(Vec2::new(v_x, v_y)),
-            WrapsScreen,
+            WrapsAroundCamera,
             Sprite {
                 color: Color::srgb(0.85, 0.75, 0.25),
                 custom_size: Some(Vec2::new(48.0, 48.0)),
@@ -75,8 +94,8 @@ fn setup(mut commands: Commands) {
             },
             Transform {
                 translation: Vec3::new(p_x, p_y, 9.0),
-                 ..default()
-            }
+                ..default()
+            },
         ));
     }
 }
@@ -114,18 +133,44 @@ fn apply_velocity(time: Res<Time>, mut query: Query<(&Velocity, &mut Transform)>
     }
 }
 
-fn wrap_axis(value: &mut f32, half: f32) {
-    if value.abs() > half {
-        *value = -value.signum() * half;
+fn camera_follow(
+    player_query: Query<&Transform, With<Player>>,
+    mut camera_query: Query<&mut Transform, (With<MainCamera>, Without<Player>)>,
+) {
+    if let Ok(player_transform) = player_query.single() {
+        if let Ok(mut camera_transform) = camera_query.single_mut() {
+            camera_transform.translation.x = player_transform.translation.x;
+            camera_transform.translation.y = player_transform.translation.y;
+        }
     }
 }
 
-fn wrap_around(mut query: Query<&mut Transform, With<WrapsScreen>>) {
-    let half_width = 750.0 / 2.0;
-    let half_height = 1000.0 / 2.0;
+fn wrap_around_camera(
+    camera_query: Query<&Transform, With<MainCamera>>,
+    mut object_query: Query<&mut Transform, (With<WrapsAroundCamera>, Without<MainCamera>)>,
+) {
+    let Ok(camera_transform) = camera_query.single() else {
+        return;
+    };
+    let cam_pos = camera_transform.translation.truncate();
+    
+    let half_width = WORLD_WIDTH / 2.0;
+    let half_height = WORLD_HEIGHT / 2.0;
 
-    for mut transform in &mut query {
-        wrap_axis(&mut transform.translation.x, half_width);
-        wrap_axis(&mut transform.translation.y, half_height);
+    for mut obj_transform in &mut object_query {
+        let obj_pos = obj_transform.translation.truncate();
+        let diff = obj_pos - cam_pos;
+        
+        if diff.x > half_width {
+            obj_transform.translation.x -= WORLD_WIDTH;
+        } else if diff.x < -half_width {
+            obj_transform.translation.x += WORLD_WIDTH;
+        }
+
+        if diff.y > half_height {
+            obj_transform.translation.y -= WORLD_HEIGHT;
+        } else if diff.y < -half_height {
+            obj_transform.translation.y += WORLD_HEIGHT;
+        }
     }
 }
