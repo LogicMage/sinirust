@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{health::*, physics::*, teams::*, asteroid::*, crystal::*};
+use crate::{health::*, physics::*, team::*, asteroid::*, crystal::*};
 
 #[derive(Component)]
 pub struct Gun {

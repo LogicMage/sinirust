@@ -2,19 +2,22 @@ mod includes;
 mod health;
 mod physics;
 mod shooting;
-mod teams;
+mod team;
 mod worker;
 mod asteroid;
 mod crystal;
+mod navigation;
+mod warrior;
 
 use bevy::math::*;
 use bevy::prelude::*;
 use includes::*;
 use physics::*;
 use shooting::*;
-use teams::*;
+use team::*;
 use worker::*;
 use asteroid::*;
+use warrior::*;
 
 use crate::health::Health;
 
@@ -38,13 +41,24 @@ fn main() {
         }),
         ..default()
     }))
-    .add_systems(Startup, (setup, spawn_workers))
+    .add_systems(
+        Startup, 
+        (
+            setup,
+            spawn_asteroids,
+            spawn_workers,
+            spawn_warriors,
+        )
+        .chain()
+    )
     .add_systems(
         Update,
         (
             player_movement_input,
             worker_roaming_ai,
             worker_movement,
+            warrior_roaming_ai,
+            warrior_movement,
             apply_velocity,
             handle_collisions,
             player_shooting_input,
@@ -87,9 +101,6 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials
         Health(1),
         Team::Player,
     ));
-
-    //asteroid spawner
-    spawn_asteroids(&mut commands, meshes, materials);
 }
 
 fn player_movement_input(keyboard: Res<ButtonInput<KeyCode>>, time: Res<Time>,

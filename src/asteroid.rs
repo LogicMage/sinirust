@@ -6,12 +6,12 @@ use crate::physics::*;
 use crate::includes::*;
 
 use crate::health::*;
-use crate::teams::*;
+use crate::team::*;
 
 #[derive(Component)]
 pub struct Asteroid;
 
-pub fn spawn_asteroids(commands: &mut Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<ColorMaterial>>)
+pub fn spawn_asteroids(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<ColorMaterial>>)
 {
     let mut rng = rand::rng();
 

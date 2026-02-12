@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use crate::{health::*, physics::*, teams::*};
+use crate::{health::*, navigation::*, physics::*, team::*};
 use rand::prelude::*;
 
 #[derive(Component)]
@@ -13,9 +13,6 @@ pub enum WorkerState {
     Collecting,
     Returning,
 }
-
-#[derive(Component)]
-pub struct NavigationTarget(pub Vec2);
 
 #[derive(Component)]
 pub struct WorkerStats {
