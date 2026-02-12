@@ -1,6 +1,11 @@
-use bevy::prelude::*;
-use rand::prelude::*;
+mod physics;
+mod shooting;
+
 use bevy::math::*;
+use bevy::prelude::*;
+use physics::*;
+use rand::prelude::*;
+use shooting::*;
 
 const PLAYER_ROT_SPEED: f32 = 3.5;
 const PLAYER_DAMPING: f32 = 0.985;
@@ -22,17 +27,6 @@ struct MainCamera;
 #[derive(Component)]
 struct MoveSpeed(f32);
 
-#[derive(Component, Deref, DerefMut)]
-struct Velocity(Vec2);
-
-#[derive(Component)]
-struct Collider {
-    radius: f32,
-}
-
-#[derive(Component)]
-struct Mass(f32);
-
 #[derive(Component)]
 struct WrapsAroundCamera;
 
@@ -51,14 +45,18 @@ fn main() {
     .add_systems(
         Update,
         (
-            player_input,
+            player_movement_input,
             apply_velocity,
             handle_collisions,
+            player_shooting_input,
+            gun_system,
+            projectile_system,
             camera_follow,
             wrap_around_camera,
         )
         .chain(),
     )
+    .add_message::<ShootMessage>()
     .run();
 }
 
@@ -82,7 +80,11 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials
         Mass(10.0),
         Mesh2d(meshes.add(Circle::new(15.0))),
         MeshMaterial2d(materials.add(ColorMaterial::from(Color::srgb(0.0, 0.0, 1.0)))),
-
+        Gun {
+            cooldown: 0.5,
+            timer: 0.0,
+            projectile_speed: 1000.0,
+        }
     ));
 
     let mut rng = rand::rng();
@@ -114,7 +116,7 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials
     }
 }
 
-fn player_input(keyboard: Res<ButtonInput<KeyCode>>, time: Res<Time>,
+fn player_movement_input(keyboard: Res<ButtonInput<KeyCode>>, time: Res<Time>,
     mut query: Query<(&MoveSpeed, &mut Transform, &mut Velocity), With<Player>>,) 
 {
     if let Ok((speed, mut transform, mut velocity)) = query.single_mut() {
@@ -139,10 +141,15 @@ fn player_input(keyboard: Res<ButtonInput<KeyCode>>, time: Res<Time>,
     }
 }
 
-fn apply_velocity(time: Res<Time>, mut query: Query<(&Velocity, &mut Transform)>)
-{
-    for (velocity, mut transform) in &mut query {
-        transform.translation += Vec3::new(velocity.x, velocity.y, 0.0) * time.delta_secs();
+fn player_shooting_input(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    query: Query<Entity, With<Player>>,
+    mut writer: MessageWriter<ShootMessage>,
+) {
+    if keyboard.pressed(KeyCode::Space) {
+        if let Ok(entity) = query.single() {
+            writer.write(ShootMessage { entity });
+        }
     }
 }
 
@@ -181,48 +188,6 @@ fn wrap_around_camera(camera_query: Query<&Transform, With<MainCamera>>, mut obj
             obj_transform.translation.y -= WORLD_HEIGHT;
         } else if diff.y < -half_height {
             obj_transform.translation.y += WORLD_HEIGHT;
-        }
-    }
-}
-
-fn handle_collisions(
-    mut query: Query<(&mut Transform, &mut Velocity, &Collider, &Mass)>,
-) {
-    //iter_combinations_mut ensures we check A vs B, but not A vs A or B vs A again
-    let mut combinations = query.iter_combinations_mut();
-    
-    while let Some([
-        (mut t1, mut v1, c1, m1), 
-        (mut t2, mut v2, c2, m2)
-    ]) = combinations.fetch_next() {
-        
-        let p1 = t1.translation.truncate();
-        let p2 = t2.translation.truncate();
-        
-        let distance = p1.distance(p2);
-        let min_dist = c1.radius + c2.radius;
-
-        if distance < min_dist {
-            let normal = (p2 - p1).normalize_or_zero();
-            
-            let depth = min_dist - distance;
-            let separation = normal * (depth / 2.0);
-            
-            t1.translation -= separation.extend(0.0);
-            t2.translation += separation.extend(0.0);
-
-            let v_rel = v1.0 - v2.0;
-            let vel_along_normal = v_rel.dot(normal);
-
-            if vel_along_normal > 0.0 {
-                continue;
-            }
-
-            let j = -(2.0 * vel_along_normal) / (1.0 / m1.0 + 1.0 / m2.0);
-            let impulse = j * normal;
-
-            v1.0 += impulse / m1.0;
-            v2.0 -= impulse / m2.0;
         }
     }
 }
