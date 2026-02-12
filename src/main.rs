@@ -1,32 +1,25 @@
+mod includes;
 mod health;
 mod physics;
 mod shooting;
 mod teams;
 mod worker;
+mod asteroid;
+mod crystal;
 
 use bevy::math::*;
 use bevy::prelude::*;
+use includes::*;
 use physics::*;
-use rand::prelude::*;
 use shooting::*;
 use teams::*;
 use worker::*;
+use asteroid::*;
 
 use crate::health::Health;
 
-const PLAYER_ROT_SPEED: f32 = 3.5;
-const PLAYER_DAMPING: f32 = 0.985;
-
-//the camera sees 750x1000
-//the world is 4000x4000, meaning there is roughly 3000 pixels of off-screen space that you have to traverse before you see an object loop around
-const WORLD_WIDTH: f32 = 4000.0;
-const WORLD_HEIGHT: f32 = 4000.0;
-
 #[derive(Component)]
 struct Player;
-
-#[derive(Component)]
-struct Asteroid;
 
 #[derive(Component)]
 struct MainCamera;
@@ -95,35 +88,8 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials
         Team::Player,
     ));
 
-    let mut rng = rand::rng();
-
     //asteroid spawner
-    for _i in 0..100 {
-        let half_w = WORLD_WIDTH / 2.0;
-        let half_h = WORLD_HEIGHT / 2.0;
-        
-        let p_x: f32 = rng.random_range(-half_w..half_w);
-        let p_y: f32 = rng.random_range(-half_h..half_h);
-        
-        let v_x: f32 = rng.random_range(-20.0..20.0);
-        let v_y: f32 = rng.random_range(-20.0..20.0);
-        
-        commands.spawn((
-            Asteroid,
-            Velocity(Vec2::new(v_x, v_y)),
-            WrapsAroundCamera,
-            Transform {
-                translation: Vec3::new(p_x, p_y, 9.0),
-                ..default()
-            },
-            Collider { radius: 30.0 },
-            Mass(50.0),
-            Mesh2d(meshes.add(Circle::new(30.0))),
-            MeshMaterial2d(materials.add(ColorMaterial::from(Color::srgb(0.5, 0.5, 0.5)))),
-            Health(3),
-            Team::None
-        ));
-    }
+    spawn_asteroids(&mut commands, meshes, materials);
 }
 
 fn player_movement_input(keyboard: Res<ButtonInput<KeyCode>>, time: Res<Time>,

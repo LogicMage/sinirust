@@ -1,5 +1,6 @@
-use crate::{health::*, physics::*, teams::*};
 use bevy::prelude::*;
+
+use crate::{health::*, physics::*, teams::*, asteroid::*, crystal::*};
 
 #[derive(Component)]
 pub struct Gun {
@@ -62,21 +63,23 @@ pub fn gun_system(
 pub fn projectile_system(
     mut commands: Commands,
     time: Res<Time>,
-    mut projectiles: Query<(Entity, &Transform, &mut Projectile)>,
-    mut targets: Query<(Entity, &Transform, &Collider, &mut Health, &Team)>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    mut projectiles: Query<(Entity, &Transform, &mut Projectile, &Velocity)>,
+    mut targets: Query<(Entity, &Transform, &Collider, &mut Health, &Team, Option<&Asteroid>)>, 
 ) {
-    for (projectile_entity, proj_transform, mut projectile) in &mut projectiles {
+    for (projectile_entity, proj_transform, mut projectile, proj_vel) in &mut projectiles {
         projectile.lifetime -= time.delta_secs();
         if projectile.lifetime <= 0.0 {
             commands.entity(projectile_entity).despawn();
-
             continue;
         }
 
         let proj_pos = proj_transform.translation.truncate();
-        for (target_entity, target_transform, target_collider, mut target_health, target_team) in
-            &mut targets
-        {
+        
+        let mut hit_something = false;
+
+        for (target_entity, target_transform, target_collider, mut target_health, target_team, asteroid_opt) in &mut targets {
             if projectile.team == Team::None || projectile.team == *target_team {
                 continue;
             }
@@ -84,16 +87,36 @@ pub fn projectile_system(
             let target_pos = target_transform.translation.truncate();
             let dist = proj_pos.distance(target_pos);
             let min_dist = projectile.radius + target_collider.radius;
-            if dist < min_dist {
-                commands.entity(projectile_entity).despawn();
 
+            if dist < min_dist {
+                //despawn bullet
+                commands.entity(projectile_entity).despawn();
+                hit_something = true;
+
+                //damage target
                 target_health.0 -= projectile.damage;
-                if target_health.0 <= 0 {
+
+                if asteroid_opt.is_some() {
+                    let impact_dir = proj_vel.0.normalize_or_zero() * 50.0;
+                    spawn_crystal(
+                        &mut commands,
+                        &mut meshes,
+                        &mut materials,
+                        target_transform.translation,
+                        impact_dir
+                    );
+                }
+                
+                if target_health.0 <= 0 { 
                     commands.entity(target_entity).despawn();
                 }
 
-                break;
+                break; 
             }
+        }
+        
+        if hit_something {
+            continue;
         }
     }
 }
