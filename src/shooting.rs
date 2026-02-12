@@ -1,4 +1,4 @@
-use crate::physics::*;
+use crate::{health::*, physics::*, teams::*};
 use bevy::prelude::*;
 
 #[derive(Component)]
@@ -11,6 +11,9 @@ pub struct Gun {
 #[derive(Component)]
 pub struct Projectile {
     pub lifetime: f32,
+    pub radius: f32,
+    pub damage: i32,
+    pub team: Team,
 }
 
 #[derive(Message)]
@@ -24,31 +27,34 @@ pub fn gun_system(
     mut messages: MessageReader<ShootMessage>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
-    mut query: Query<(Entity, &Transform, &mut Gun)>,
+    mut query: Query<(Entity, &Transform, &mut Gun, &Team)>,
 ) {
-    // tick cooldowns
-    for (_, _, mut weapon) in &mut query {
-        weapon.timer -= time.delta_secs();
+    for (_, _, mut gun, _) in &mut query {
+        gun.timer -= time.delta_secs();
     }
 
     for message in messages.read() {
-        if let Ok((_, transform, mut gun)) = query.get_mut(message.entity) {
+        if let Ok((_, transform, mut gun, team)) = query.get_mut(message.entity) {
             if gun.timer > 0.0 {
                 continue;
             }
 
-            gun.timer = gun.cooldown;
-
             let forward = (transform.rotation * Vec3::Y).truncate();
             let velocity = forward * gun.projectile_speed;
-
             commands.spawn((
                 Transform::from_translation(transform.translation),
-                Projectile { lifetime: 1.0 },
+                Projectile {
+                    lifetime: 1.0,
+                    radius: 5.0,
+                    damage: 1,
+                    team: *team,
+                },
                 Velocity(velocity),
                 Mesh2d(meshes.add(Circle::new(5.0))),
                 MeshMaterial2d(materials.add(ColorMaterial::from(Color::srgb(1.0, 1.0, 1.0)))),
             ));
+
+            gun.timer = gun.cooldown;
         }
     }
 }
@@ -56,12 +62,38 @@ pub fn gun_system(
 pub fn projectile_system(
     mut commands: Commands,
     time: Res<Time>,
-    mut query: Query<(Entity, &mut Projectile)>,
+    mut projectiles: Query<(Entity, &Transform, &mut Projectile)>,
+    mut targets: Query<(Entity, &Transform, &Collider, &mut Health, &Team)>,
 ) {
-    for (entity, mut proj) in &mut query {
-        proj.lifetime -= time.delta_secs();
-        if proj.lifetime <= 0.0 {
-            commands.entity(entity).despawn();
+    for (projectile_entity, proj_transform, mut projectile) in &mut projectiles {
+        projectile.lifetime -= time.delta_secs();
+        if projectile.lifetime <= 0.0 {
+            commands.entity(projectile_entity).despawn();
+
+            continue;
+        }
+
+        let proj_pos = proj_transform.translation.truncate();
+        for (target_entity, target_transform, target_collider, mut target_health, target_team) in
+            &mut targets
+        {
+            if projectile.team == Team::None || projectile.team == *target_team {
+                continue;
+            }
+
+            let target_pos = target_transform.translation.truncate();
+            let dist = proj_pos.distance(target_pos);
+            let min_dist = projectile.radius + target_collider.radius;
+            if dist < min_dist {
+                commands.entity(projectile_entity).despawn();
+
+                target_health.0 -= projectile.damage;
+                if target_health.0 <= 0 {
+                    commands.entity(target_entity).despawn();
+                }
+
+                break;
+            }
         }
     }
 }

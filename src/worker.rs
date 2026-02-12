@@ -1,5 +1,5 @@
 use bevy::prelude::*;
-use crate::physics::*;
+use crate::{health::*, physics::*, teams::*};
 use rand::prelude::*;
 
 #[derive(Component)]
@@ -47,6 +47,8 @@ pub fn spawn_workers(
             Mesh2d(meshes.add(RegularPolygon::new(12.0, 6))), 
             MeshMaterial2d(materials.add(ColorMaterial::from(Color::srgb(0.9, 0.1, 0.1)))),
             Transform::from_xyz(p_x, p_y, 0.0),
+            Health(1),
+            Team::Enemy,
         ));
     }
 }

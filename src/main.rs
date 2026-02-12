@@ -1,5 +1,7 @@
+mod health;
 mod physics;
 mod shooting;
+mod teams;
 mod worker;
 
 use bevy::math::*;
@@ -7,7 +9,10 @@ use bevy::prelude::*;
 use physics::*;
 use rand::prelude::*;
 use shooting::*;
+use teams::*;
 use worker::*;
+
+use crate::health::Health;
 
 const PLAYER_ROT_SPEED: f32 = 3.5;
 const PLAYER_DAMPING: f32 = 0.985;
@@ -85,7 +90,9 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials
             cooldown: 0.5,
             timer: 0.0,
             projectile_speed: 1000.0,
-        }
+        },
+        Health(1),
+        Team::Player,
     ));
 
     let mut rng = rand::rng();
@@ -113,6 +120,8 @@ fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials
             Mass(50.0),
             Mesh2d(meshes.add(Circle::new(30.0))),
             MeshMaterial2d(materials.add(ColorMaterial::from(Color::srgb(0.5, 0.5, 0.5)))),
+            Health(3),
+            Team::None
         ));
     }
 }
