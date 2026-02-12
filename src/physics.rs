@@ -11,6 +11,9 @@ pub struct Collider {
 #[derive(Component)]
 pub struct Mass(pub f32);
 
+#[derive(Component)]
+pub struct WrapsAroundCamera;
+
 pub fn apply_velocity(time: Res<Time>, mut query: Query<(&Velocity, &mut Transform)>) {
     for (velocity, mut transform) in &mut query {
         transform.translation += Vec3::new(velocity.x, velocity.y, 0.0) * time.delta_secs();

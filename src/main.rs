@@ -1,11 +1,13 @@
 mod physics;
 mod shooting;
+mod worker;
 
 use bevy::math::*;
 use bevy::prelude::*;
 use physics::*;
 use rand::prelude::*;
 use shooting::*;
+use worker::*;
 
 const PLAYER_ROT_SPEED: f32 = 3.5;
 const PLAYER_DAMPING: f32 = 0.985;
@@ -27,9 +29,6 @@ struct MainCamera;
 #[derive(Component)]
 struct MoveSpeed(f32);
 
-#[derive(Component)]
-struct WrapsAroundCamera;
-
 fn main() {
     let mut app = App::new();
     app.add_plugins(DefaultPlugins.set(WindowPlugin {
@@ -41,11 +40,13 @@ fn main() {
         }),
         ..default()
     }))
-    .add_systems(Startup, setup)
+    .add_systems(Startup, (setup, spawn_workers))
     .add_systems(
         Update,
         (
             player_movement_input,
+            worker_roaming_ai,
+            worker_movement,
             apply_velocity,
             handle_collisions,
             player_shooting_input,
