@@ -58,9 +58,11 @@ fn main() {
         (
             player_movement_input,
             worker_roaming_ai,
+            worker_sensor_ai,
             worker_movement,
             warrior_ai,
             warrior_movement,
+            //worker_collection_check,
             apply_velocity,
             handle_collisions,
             crystal_impacts,

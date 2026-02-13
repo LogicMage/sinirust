@@ -3,6 +3,9 @@ use rand::prelude::*;
 use crate::physics::*;
 use crate::player::*;
 use crate::includes::*;
+use crate::worker::*;
+use crate::navigation::*;
+use std::collections::HashSet;
 
 #[derive(Component)]
 pub struct Crystal;
@@ -35,10 +38,12 @@ pub fn crystal_impacts(
     mut sinibombs: ResMut<Sinibombs>,
     mut score: ResMut<GameScore>,
     player_query: Query<&Transform, With<Player>>,
+    mut worker_query: Query<(Entity, &Transform, &mut HasCrystal, &mut WorkerState), With<Worker>>,
     crystal_query: Query<(Entity, &Transform), With<Crystal>>,
 ) {
+    let mut taken_crystals: HashSet<Entity> = HashSet::new();
+
     for player_transform in player_query.iter() {
-        
         for (crystal_entity, crystal_transform) in crystal_query.iter() {
             let distance = player_transform.translation.distance(crystal_transform.translation);
 
@@ -46,6 +51,29 @@ pub fn crystal_impacts(
                 score.0 += 200;
                 sinibombs.0 += 1;
                 commands.entity(crystal_entity).despawn();
+                taken_crystals.insert(crystal_entity);
+            }
+        }
+    }
+
+    for (worker_entity, worker_tf, mut has_crystal, mut state) in &mut worker_query {
+        if *state == WorkerState::Collecting {
+            
+            for (crystal_entity, crystal_tf) in &crystal_query {
+                if taken_crystals.contains(&crystal_entity) {
+                    continue;
+                }
+
+                if worker_tf.translation.distance(crystal_tf.translation) < 30.0 {
+                    commands.entity(crystal_entity).despawn();
+                    taken_crystals.insert(crystal_entity);
+
+                    has_crystal.0 = true;
+                    *state = WorkerState::Returning;
+
+                    commands.entity(worker_entity).remove::<NavigationTarget>();
+                    break;
+                }
             }
         }
     }
