@@ -8,7 +8,7 @@ pub struct Player
     pub speed: f32,
 }
 
-pub fn spawn_player(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<ColorMaterial>>)
+pub fn spawn_player(commands: &mut Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<ColorMaterial>>)
 {
         commands.spawn((
         Player

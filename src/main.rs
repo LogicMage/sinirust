@@ -1,27 +1,29 @@
-mod includes;
+mod asteroid;
+mod audio;
+mod crystal;
 mod health;
+mod includes;
+mod navigation;
 mod physics;
+mod player;
 mod shooting;
 mod team;
-mod worker;
-mod asteroid;
-mod crystal;
-mod navigation;
-mod warrior;
-mod player;
 mod ui;
+mod warrior;
+mod worker;
 
+use asteroid::*;
+use audio::*;
 use bevy::math::*;
 use bevy::prelude::*;
+use crystal::*;
 use includes::*;
 use physics::*;
-use shooting::*;
-use worker::*;
-use asteroid::*;
-use crystal::*;
-use warrior::*;
 use player::*;
+use shooting::*;
 use ui::*;
+use warrior::*;
+use worker::*;
 
 #[derive(Component)]
 struct MainCamera;
@@ -40,7 +42,7 @@ fn main() {
     .init_resource::<GameScore>()
     .init_resource::<Sinibombs>()
     .add_systems(
-        Startup, 
+        Startup,
         (
             setup,
             spawn_asteroids,
@@ -48,7 +50,7 @@ fn main() {
             spawn_warriors,
             setup_score_ui,
         )
-        .chain()
+            .chain(),
     )
     .add_systems(
         Update,
@@ -68,21 +70,30 @@ fn main() {
             camera_follow,
             wrap_around_camera,
         )
-        .chain(),
+            .chain(),
     )
     .add_message::<ShootMessage>()
     .run();
 }
 
-fn setup(mut commands: Commands, meshes: ResMut<Assets<Mesh>>, materials: ResMut<Assets<ColorMaterial>>) {
+fn setup(
+    mut commands: Commands,
+    meshes: ResMut<Assets<Mesh>>,
+    materials: ResMut<Assets<ColorMaterial>>,
+    asset_server: Res<AssetServer>,
+) {
     commands.spawn((Camera2d, MainCamera));
 
-    spawn_player(commands, meshes, materials);
+    spawn_player(&mut commands, meshes, materials);
+
+    spawn_music(&mut commands, asset_server);
 }
 
-fn player_movement_input(keyboard: Res<ButtonInput<KeyCode>>, time: Res<Time>,
-    mut query: Query<(&mut Transform, &Player, &mut Velocity)>,) 
-{
+fn player_movement_input(
+    keyboard: Res<ButtonInput<KeyCode>>,
+    time: Res<Time>,
+    mut query: Query<(&mut Transform, &Player, &mut Velocity)>,
+) {
     if let Ok((mut transform, player, mut velocity)) = query.single_mut() {
         let dt = time.delta_secs();
 
@@ -117,8 +128,10 @@ fn player_shooting_input(
     }
 }
 
-fn camera_follow(player_query: Query<&Transform, With<Player>>, mut camera_query: Query<&mut Transform, (With<MainCamera>, Without<Player>)>,)
-{
+fn camera_follow(
+    player_query: Query<&Transform, With<Player>>,
+    mut camera_query: Query<&mut Transform, (With<MainCamera>, Without<Player>)>,
+) {
     if let Ok(player_transform) = player_query.single() {
         if let Ok(mut camera_transform) = camera_query.single_mut() {
             camera_transform.translation.x = player_transform.translation.x;
@@ -127,14 +140,15 @@ fn camera_follow(player_query: Query<&Transform, With<Player>>, mut camera_query
     }
 }
 
-fn wrap_around_camera(camera_query: Query<&Transform, With<MainCamera>>, mut object_query: Query<&mut Transform,
-    (With<WrapsAroundCamera>, Without<MainCamera>)>,) 
-{
+fn wrap_around_camera(
+    camera_query: Query<&Transform, With<MainCamera>>,
+    mut object_query: Query<&mut Transform, (With<WrapsAroundCamera>, Without<MainCamera>)>,
+) {
     let Ok(camera_transform) = camera_query.single() else {
         return;
     };
     let cam_pos = camera_transform.translation.truncate();
-    
+
     let half_width = WORLD_WIDTH / 2.0;
     let half_height = WORLD_HEIGHT / 2.0;
 

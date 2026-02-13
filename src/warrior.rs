@@ -2,7 +2,7 @@ use crate::{health::*, navigation::*, physics::*, player::*, shooting::*, team::
 use bevy::prelude::*;
 use rand::prelude::*;
 
-const WARRIOR_RADIUS: f32 = 30.0;
+const WARRIOR_RADIUS: f32 = 12.0;
 
 #[derive(Component)]
 pub struct Warrior {
@@ -32,7 +32,7 @@ pub fn spawn_warriors(
                 radius: WARRIOR_RADIUS,
             },
             Mass(6.0),
-            Mesh2d(meshes.add(RegularPolygon::new(12.0, 5))),
+            Mesh2d(meshes.add(RegularPolygon::new(WARRIOR_RADIUS, 5))),
             MeshMaterial2d(materials.add(ColorMaterial::from(Color::srgb(1.0, 1.0, 0.0)))),
             Gun {
                 cooldown: 3.0,
