@@ -1,4 +1,4 @@
-use crate::{health::*, navigation::*, physics::*, player::*, team::*};
+use crate::{health::*, navigation::*, physics::*, player::*, shooting::*, team::*};
 use bevy::prelude::*;
 use rand::prelude::*;
 
@@ -25,7 +25,7 @@ pub fn spawn_warriors(
             Transform::from_xyz(p_x, p_y, 0.0),
             Warrior {
                 acceleration: 200.0,
-                detection_radius: 200.0,
+                detection_radius: 500.0,
             },
             Velocity(Vec2::ZERO),
             Collider {
@@ -34,6 +34,11 @@ pub fn spawn_warriors(
             Mass(6.0),
             Mesh2d(meshes.add(Circle::new(WARRIOR_RADIUS))),
             MeshMaterial2d(materials.add(ColorMaterial::from(Color::srgb(1.0, 1.0, 1.0)))),
+            Gun {
+                cooldown: 3.0,
+                timer: 0.0,
+                projectile_speed: 500.0,
+            },
             Health(1),
             Team::Enemy,
         ));
@@ -44,11 +49,21 @@ pub fn warrior_ai(
     mut commands: Commands,
     mut warriors: Query<(Entity, &Transform, &Warrior, Option<&NavigationTarget>)>,
     players: Query<(Entity, &Transform), With<Player>>,
+    mut writer: MessageWriter<ShootMessage>,
 ) {
     let mut rng = rand::rng();
 
     for (warrior_entity, warrior_transform, warrior, target) in &mut warriors {
-            update_target(warrior_entity, warrior, warrior_transform, target, &mut commands, players, &mut rng);
+        update_target(
+            warrior_entity,
+            warrior,
+            warrior_transform,
+            target,
+            &mut commands,
+            players,
+            &mut writer,
+            &mut rng,
+        );
     }
 }
 
@@ -59,6 +74,7 @@ fn update_target(
     current_target: Option<&NavigationTarget>,
     commands: &mut Commands,
     players: Query<(Entity, &Transform), With<Player>>,
+    writer: &mut MessageWriter<ShootMessage>,
     rng: &mut ThreadRng,
 ) {
     let mut target_transform: Option<&Transform> = None;
@@ -73,15 +89,17 @@ fn update_target(
         break;
     }
 
-    if target_transform.is_some()
-    {
-        commands.entity(warrior_entity).insert(NavigationTarget(target_transform.unwrap().translation.xy()));
+    if target_transform.is_some() {
+        commands
+            .entity(warrior_entity)
+            .insert(NavigationTarget(target_transform.unwrap().translation.xy()));
 
+        writer.write(ShootMessage { entity: warrior_entity });
+        
         return;
     }
 
-    if current_target.is_some()
-    {
+    if current_target.is_some() {
         return;
     }
 
@@ -90,7 +108,9 @@ fn update_target(
     let offset_x = rng.random_range(-800.0..800.0);
     let offset_y = rng.random_range(-800.0..800.0);
     let target = current_pos + Vec2::new(offset_x, offset_y);
-    commands.entity(warrior_entity).insert(NavigationTarget(target));
+    commands
+        .entity(warrior_entity)
+        .insert(NavigationTarget(target));
 }
 
 pub fn warrior_movement(
