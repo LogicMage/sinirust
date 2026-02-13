@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{health::*, physics::*, team::*, asteroid::*, crystal::*, includes::*};
+use crate::{asteroid::*, audio::AudioAssets, crystal::*, health::*, includes::*, physics::*, team::*};
 
 #[derive(Component)]
 pub struct Gun {
@@ -29,6 +29,7 @@ pub fn gun_system(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut query: Query<(Entity, &Transform, &mut Gun, &Team)>,
+    sounds: Res<AudioAssets>,
 ) {
     for (_, _, mut gun, _) in &mut query {
         gun.timer -= time.delta_secs();
@@ -54,6 +55,8 @@ pub fn gun_system(
                 Mesh2d(meshes.add(Circle::new(5.0))),
                 MeshMaterial2d(materials.add(ColorMaterial::from(Color::srgb(1.0, 1.0, 1.0)))),
             ));
+
+            commands.spawn(AudioPlayer::new(sounds.shoot.clone()));
 
             gun.timer = gun.cooldown;
         }

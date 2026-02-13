@@ -44,6 +44,7 @@ fn main() {
     .add_systems(
         Startup,
         (
+            load_sounds,
             setup,
             spawn_asteroids,
             spawn_workers,
@@ -80,13 +81,13 @@ fn setup(
     mut commands: Commands,
     meshes: ResMut<Assets<Mesh>>,
     materials: ResMut<Assets<ColorMaterial>>,
-    asset_server: Res<AssetServer>,
+    sounds: Res<AudioAssets>,
 ) {
     commands.spawn((Camera2d, MainCamera));
 
     spawn_player(&mut commands, meshes, materials);
 
-    spawn_music(&mut commands, asset_server);
+    spawn_music(&mut commands, sounds.music.clone());
 }
 
 fn player_movement_input(
