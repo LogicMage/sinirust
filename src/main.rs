@@ -9,6 +9,7 @@ mod crystal;
 mod navigation;
 mod warrior;
 mod player;
+mod ui;
 
 use bevy::math::*;
 use bevy::prelude::*;
@@ -17,8 +18,10 @@ use physics::*;
 use shooting::*;
 use worker::*;
 use asteroid::*;
+use crystal::*;
 use warrior::*;
 use player::*;
+use ui::*;
 
 #[derive(Component)]
 struct MainCamera;
@@ -34,6 +37,8 @@ fn main() {
         }),
         ..default()
     }))
+    .init_resource::<GameScore>()
+    .init_resource::<Sinibombs>()
     .add_systems(
         Startup, 
         (
@@ -41,6 +46,7 @@ fn main() {
             spawn_asteroids,
             spawn_workers,
             spawn_warriors,
+            setup_score_ui,
         )
         .chain()
     )
@@ -54,9 +60,11 @@ fn main() {
             warrior_movement,
             apply_velocity,
             handle_collisions,
+            crystal_impacts,
             player_shooting_input,
             gun_system,
             projectile_system,
+            update_score_text,
             camera_follow,
             wrap_around_camera,
         )

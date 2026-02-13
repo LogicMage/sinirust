@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{health::*, physics::*, team::*, asteroid::*, crystal::*};
+use crate::{health::*, physics::*, team::*, asteroid::*, crystal::*, includes::*};
 
 #[derive(Component)]
 pub struct Gun {
@@ -66,7 +66,8 @@ pub fn projectile_system(
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut projectiles: Query<(Entity, &Transform, &mut Projectile, &Velocity)>,
-    mut targets: Query<(Entity, &Transform, &Collider, &mut Health, &Team, Option<&Asteroid>)>, 
+    mut targets: Query<(Entity, &Transform, &Collider, &mut Health, &Team, Option<&Asteroid>)>,
+    mut score: ResMut<GameScore>,
 ) {
     for (projectile_entity, proj_transform, mut projectile, proj_vel) in &mut projectiles {
         projectile.lifetime -= time.delta_secs();
@@ -79,7 +80,8 @@ pub fn projectile_system(
         
         let mut hit_something = false;
 
-        for (target_entity, target_transform, target_collider, mut target_health, target_team, asteroid_opt) in &mut targets {
+        for (target_entity, target_transform, target_collider,
+            mut target_health, target_team, asteroid_opt) in &mut targets {
             if projectile.team == Team::None || projectile.team == *target_team {
                 continue;
             }
@@ -109,6 +111,7 @@ pub fn projectile_system(
                 
                 if target_health.0 <= 0 { 
                     commands.entity(target_entity).despawn();
+                    score.0 += 100;
                 }
 
                 break; 
