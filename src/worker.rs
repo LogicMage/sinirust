@@ -1,12 +1,15 @@
 use bevy::prelude::*;
-use crate::{health::*, navigation::*, physics::*, team::*};
+use crate::{health::*, navigation::*, physics::*, team::*, crystal::*};
 use rand::prelude::*;
 
 #[derive(Component)]
 pub struct Worker;
 
-//worker state machine
 #[derive(Component, Default)]
+pub struct HasCrystal(pub bool);
+
+//worker state machine
+#[derive(Component, Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum WorkerState {
     #[default]
     Roaming,
@@ -27,7 +30,7 @@ pub fn spawn_workers(
 ) {
     let mut rng = rand::rng();
 
-    for _ in 0..5 {
+    for _ in 0..20 {
         let p_x = rng.random_range(-1000.0..1000.0);
         let p_y = rng.random_range(-1000.0..1000.0);
 
@@ -36,7 +39,7 @@ pub fn spawn_workers(
             WorkerState::default(),
             WorkerStats {
                 speed: 200.0,
-                detection_radius: 200.0,
+                detection_radius: 400.0,
             },
             Velocity(Vec2::ZERO),
             Collider { radius: 12.0 },
@@ -46,6 +49,7 @@ pub fn spawn_workers(
             Transform::from_xyz(p_x, p_y, 0.0),
             Health(1),
             Team::Enemy,
+            HasCrystal(false)
         ));
     }
 }
@@ -66,6 +70,52 @@ pub fn worker_roaming_ai(
             let target = current_pos + Vec2::new(offset_x, offset_y);
 
             commands.entity(entity).insert(NavigationTarget(target));
+        }
+    }
+}
+
+pub fn worker_sensor_ai(
+    mut commands: Commands,
+    // We must query for &HasCrystal to check the bool, rather than using Without<HasCrystal>
+    mut worker_query: Query<(Entity, &Transform, &WorkerStats, &mut WorkerState, &HasCrystal), With<Worker>>,
+    crystal_query: Query<&Transform, With<Crystal>>,
+) {
+    for (entity, worker_tf, stats, mut state, has_crystal) in &mut worker_query {
+        // Only look for crystals if we are roaming or already collecting (to update target)
+        // AND we don't currently have a crystal.
+        if !has_crystal.0 && matches!(*state, WorkerState::Roaming | WorkerState::Collecting) {
+            
+            let worker_pos = worker_tf.translation.truncate();
+            let mut closest_crystal_pos: Option<Vec2> = None;
+            
+            // The prompt requested a 200 unit detection trigger
+            let mut closest_dist = 200.0_f32.min(stats.detection_radius);
+
+            for crystal_tf in &crystal_query {
+                let crystal_pos = crystal_tf.translation.truncate();
+                let dist = worker_pos.distance(crystal_pos);
+
+                if dist < closest_dist {
+                    closest_dist = dist;
+                    closest_crystal_pos = Some(crystal_pos);
+                }
+            }
+
+            if let Some(target_pos) = closest_crystal_pos {
+                // Determine logic: State switch
+                // If we found a crystal, we are now Collecting
+                if *state != WorkerState::Collecting {
+                   *state = WorkerState::Collecting;
+                }
+                
+                // Update the moving target to the crystal's position
+                commands.entity(entity).insert(NavigationTarget(target_pos));
+            } else if *state == WorkerState::Collecting {
+                // If we were collecting but can no longer see a crystal (someone else took it),
+                // go back to roaming
+                *state = WorkerState::Roaming;
+                commands.entity(entity).remove::<NavigationTarget>();
+            }
         }
     }
 }
