@@ -8,27 +8,20 @@ mod asteroid;
 mod crystal;
 mod navigation;
 mod warrior;
+mod player;
 
 use bevy::math::*;
 use bevy::prelude::*;
 use includes::*;
 use physics::*;
 use shooting::*;
-use team::*;
 use worker::*;
 use asteroid::*;
 use warrior::*;
-
-use crate::health::Health;
-
-#[derive(Component)]
-struct Player;
+use player::*;
 
 #[derive(Component)]
 struct MainCamera;
-
-#[derive(Component)]
-struct MoveSpeed(f32);
 
 fn main() {
     let mut app = App::new();
@@ -57,7 +50,7 @@ fn main() {
             player_movement_input,
             worker_roaming_ai,
             worker_movement,
-            warrior_roaming_ai,
+            warrior_ai,
             warrior_movement,
             apply_velocity,
             handle_collisions,
@@ -73,40 +66,16 @@ fn main() {
     .run();
 }
 
-fn setup(mut commands: Commands, mut meshes: ResMut<Assets<Mesh>>, mut materials: ResMut<Assets<ColorMaterial>>) {
+fn setup(mut commands: Commands, meshes: ResMut<Assets<Mesh>>, materials: ResMut<Assets<ColorMaterial>>) {
     commands.spawn((Camera2d, MainCamera));
 
-    commands.spawn((
-        Player,
-        MoveSpeed(500.0),
-        Velocity(Vec2::ZERO),
-        Sprite {
-            color: Color::srgb(0.2, 0.8, 0.3),
-            custom_size: Some(Vec2::new(32.0, 32.0)),
-            ..default()
-        },
-        Transform::default(),
-        GlobalTransform::default(),
-        Visibility::default(),
-        InheritedVisibility::default(),
-        Collider { radius: 15.0 },
-        Mass(10.0),
-        Mesh2d(meshes.add(Circle::new(15.0))),
-        MeshMaterial2d(materials.add(ColorMaterial::from(Color::srgb(0.0, 0.0, 1.0)))),
-        Gun {
-            cooldown: 0.5,
-            timer: 0.0,
-            projectile_speed: 1000.0,
-        },
-        Health(1),
-        Team::Player,
-    ));
+    spawn_player(commands, meshes, materials);
 }
 
 fn player_movement_input(keyboard: Res<ButtonInput<KeyCode>>, time: Res<Time>,
-    mut query: Query<(&MoveSpeed, &mut Transform, &mut Velocity), With<Player>>,) 
+    mut query: Query<(&mut Transform, &Player, &mut Velocity)>,) 
 {
-    if let Ok((speed, mut transform, mut velocity)) = query.single_mut() {
+    if let Ok((mut transform, player, mut velocity)) = query.single_mut() {
         let dt = time.delta_secs();
 
         if keyboard.pressed(KeyCode::KeyA) {
@@ -117,11 +86,11 @@ fn player_movement_input(keyboard: Res<ButtonInput<KeyCode>>, time: Res<Time>,
         }
         if keyboard.pressed(KeyCode::KeyW) {
             let forward = (transform.rotation * Vec3::Y).truncate();
-            **velocity += forward * speed.0 * dt;
+            **velocity += forward * player.speed * dt;
         }
         if keyboard.pressed(KeyCode::KeyS) {
             let backward = (transform.rotation * Vec3::Y).truncate();
-            **velocity -= backward * (speed.0 * 0.5) * dt;
+            **velocity -= backward * (player.speed * 0.5) * dt;
         }
 
         **velocity *= PLAYER_DAMPING.powf(dt * 90.0);

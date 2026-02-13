@@ -1,4 +1,4 @@
-use crate::{health::*, navigation::*, physics::*, team::*};
+use crate::{health::*, navigation::*, physics::*, player::*, team::*};
 use bevy::prelude::*;
 use rand::prelude::*;
 
@@ -7,16 +7,7 @@ const WARRIOR_RADIUS: f32 = 30.0;
 #[derive(Component)]
 pub struct Warrior {
     pub acceleration: f32,
-    //pub detection_radius: f32,
-    pub state: WarriorState,
-}
-
-//warrior state machine
-#[derive(Default)]
-pub enum WarriorState {
-    #[default]
-    Roaming,
-    //Fighting,
+    pub detection_radius: f32,
 }
 
 pub fn spawn_warriors(
@@ -34,10 +25,12 @@ pub fn spawn_warriors(
             Transform::from_xyz(p_x, p_y, 0.0),
             Warrior {
                 acceleration: 200.0,
-                state: WarriorState::default(),
+                detection_radius: 200.0,
             },
             Velocity(Vec2::ZERO),
-            Collider { radius: WARRIOR_RADIUS },
+            Collider {
+                radius: WARRIOR_RADIUS,
+            },
             Mass(6.0),
             Mesh2d(meshes.add(Circle::new(WARRIOR_RADIUS))),
             MeshMaterial2d(materials.add(ColorMaterial::from(Color::srgb(1.0, 1.0, 1.0)))),
@@ -47,34 +40,73 @@ pub fn spawn_warriors(
     }
 }
 
-pub fn warrior_roaming_ai(
+pub fn warrior_ai(
     mut commands: Commands,
-    mut query: Query<(Entity, &Transform, &Warrior), Without<NavigationTarget>>,
+    mut warriors: Query<(Entity, &Transform, &Warrior, Option<&NavigationTarget>)>,
+    players: Query<(Entity, &Transform), With<Player>>,
 ) {
     let mut rng = rand::rng();
 
-    for (entity, transform, warrior) in &mut query {
-        if matches!(warrior.state, WarriorState::Roaming) {
-            //pick a random point relative to current position and travel there
-            let offset_x = rng.random_range(-800.0..800.0);
-            let offset_y = rng.random_range(-800.0..800.0);
-
-            let current_pos = transform.translation.truncate();
-            let target = current_pos + Vec2::new(offset_x, offset_y);
-
-            commands.entity(entity).insert(NavigationTarget(target));
-        }
+    for (warrior_entity, warrior_transform, warrior, target) in &mut warriors {
+            update_target(warrior_entity, warrior, warrior_transform, target, &mut commands, players, &mut rng);
     }
+}
+
+fn update_target(
+    warrior_entity: Entity,
+    warrior: &Warrior,
+    warrior_transform: &Transform,
+    current_target: Option<&NavigationTarget>,
+    commands: &mut Commands,
+    players: Query<(Entity, &Transform), With<Player>>,
+    rng: &mut ThreadRng,
+) {
+    let mut target_transform: Option<&Transform> = None;
+    for (_, player_transform) in players {
+        let delta = player_transform.translation.xy() - warrior_transform.translation.xy();
+        let distance = delta.length();
+        if distance > warrior.detection_radius {
+            continue;
+        }
+
+        target_transform = Some(player_transform);
+        break;
+    }
+
+    if target_transform.is_some()
+    {
+        commands.entity(warrior_entity).insert(NavigationTarget(target_transform.unwrap().translation.xy()));
+
+        return;
+    }
+
+    if current_target.is_some()
+    {
+        return;
+    }
+
+    //pick a random point relative to current position and travel there
+    let current_pos = warrior_transform.translation.truncate();
+    let offset_x = rng.random_range(-800.0..800.0);
+    let offset_y = rng.random_range(-800.0..800.0);
+    let target = current_pos + Vec2::new(offset_x, offset_y);
+    commands.entity(warrior_entity).insert(NavigationTarget(target));
 }
 
 pub fn warrior_movement(
     mut commands: Commands,
     time: Res<Time>,
-    mut query: Query<(Entity, &mut Transform, &Warrior, &mut Velocity, &NavigationTarget)>,
+    mut warriors: Query<(
+        Entity,
+        &mut Transform,
+        &Warrior,
+        &mut Velocity,
+        &NavigationTarget,
+    )>,
 ) {
     let delta_time = time.delta_secs();
 
-    for (entity, mut transform, warrior, mut velocity, target) in &mut query {
+    for (entity, mut transform, warrior, mut velocity, target) in &mut warriors {
         //arrival check
         let current_pos = transform.translation.xy();
         let delta = target.0 - current_pos;
