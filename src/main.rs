@@ -57,7 +57,7 @@ fn setup_menu(
 ) {
     let font = asset_server.load("fonts/FiraSans-Bold.ttf");
 
-    commands.spawn(Camera2d);
+    commands.spawn((Camera2d, MainCamera));
 
     //root container
     commands.spawn((
@@ -270,8 +270,6 @@ fn setup(
     materials: ResMut<Assets<ColorMaterial>>,
     sounds: Res<AudioAssets>,
 ) {
-    commands.spawn((Camera2d, MainCamera));
-
     spawn_player(&mut commands, meshes, materials);
 
     spawn_music(&mut commands, sounds.music.clone());
