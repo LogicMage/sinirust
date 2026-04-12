@@ -56,3 +56,4 @@ pub fn handle_collisions(mut query: Query<(&mut Transform, &mut Velocity, &Colli
         }
     }
 }
+

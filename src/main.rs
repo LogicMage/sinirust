@@ -62,7 +62,6 @@ fn main() {
             worker_movement,
             warrior_ai,
             warrior_movement,
-            //worker_collection_check,
             apply_velocity,
             handle_collisions,
             crystal_impacts,
