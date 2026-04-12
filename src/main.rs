@@ -87,6 +87,7 @@ fn main() {
             gun_system,
             projectile_system,
             launcher_system,
+            bomb_system,
             update_score_text,
             camera_follow,
             wrap_around_camera,
