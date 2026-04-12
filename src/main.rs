@@ -77,6 +77,8 @@ fn main() {
             player_movement_input,
             worker_roaming_ai,
             worker_sensor_ai,
+            worker_returning_ai,
+            worker_return_deposit,
             worker_movement,
             warrior_ai,
             warrior_movement,

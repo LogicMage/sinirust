@@ -15,36 +15,27 @@ pub struct Sinistar;
 #[derive(Component)]
 pub struct SinistarPiece(IVec2);
 
-pub fn spawn_sinistar(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<ColorMaterial>>,
-    existing_pieces: Query<(&SinistarPiece, &ChildOf)>,
-) {
+pub fn spawn_sinistar(mut commands: Commands) {
     let mut rng = rand::rng();
-    let angle: f32 = rng.random_range(0.0..360.0);
+    let angle: f32 = rng.random_range(0.0_f32..360.0).to_radians();
     let position = Vec3::new(
         SPAWN_DISTANCE * angle.sin(),
         SPAWN_DISTANCE * angle.cos(),
         0.0,
     );
-    let parent = commands
-        .spawn((
-            Sinistar,
-            Transform::from_translation(position),
-            GlobalTransform::default(),
-            Velocity(Vec2::ZERO),
-            Collider {
-                radius: f32::min(
-                    PIECE_COUNT.x as f32 * PIECE_SIZE,
-                    PIECE_COUNT.y as f32 * PIECE_SIZE,
-                ) / 2.0,
-            },
-            Mass(20.0),
-        ))
-        .id();
-
-    add_pieces(&mut commands, parent, &mut meshes, &mut materials, &existing_pieces, None);
+    commands.spawn((
+        Sinistar,
+        Transform::from_translation(position),
+        GlobalTransform::default(),
+        Velocity(Vec2::ZERO),
+        Collider {
+            radius: f32::min(
+                PIECE_COUNT.x as f32 * PIECE_SIZE,
+                PIECE_COUNT.y as f32 * PIECE_SIZE,
+            ) / 2.0,
+        },
+        Mass(20.0),
+    ));
 }
 
 pub fn add_pieces(
@@ -74,21 +65,21 @@ pub fn add_pieces(
     for x in 0..PIECE_COUNT.x {
         for y in 0..PIECE_COUNT.y {
             let cell = IVec2::new(x, y);
-            if occupied.contains(&cell){
+            if occupied.contains(&cell) {
                 continue;
             }
 
-            commands.spawn((
+            let child = commands.spawn((
                 SinistarPiece(IVec2::new(x, y)),
                 Transform::from_translation(Vec3::new(
                     (x as f32 - (PIECE_COUNT.x as f32 - 1.0) / 2.0) * PIECE_SIZE,
                     (y as f32 - (PIECE_COUNT.y as f32 - 1.0) / 2.0) * PIECE_SIZE,
                     0.0,
                 )),
-                ChildOf(parent),
                 Mesh2d(mesh.clone()),
                 MeshMaterial2d(material.clone()),
-            ));
+            )).id();
+            commands.entity(parent).add_child(child);
 
             added_count += 1;
             if let Some(max_add) = max_add_count
@@ -106,7 +97,9 @@ pub fn remove_pieces(
     pieces: &Query<(Entity, &ChildOf), With<SinistarPiece>>,
     max_remove_count: Option<u32>,
 ) {
-    if let Some(max) = max_remove_count && max == 0 {
+    if let Some(max) = max_remove_count
+        && max == 0
+    {
         return;
     }
 
@@ -119,7 +112,9 @@ pub fn remove_pieces(
         commands.entity(entity).despawn();
 
         removed_count += 1;
-        if let Some(max) = max_remove_count && removed_count >= max {
+        if let Some(max) = max_remove_count
+            && removed_count >= max
+        {
             return;
         }
     }

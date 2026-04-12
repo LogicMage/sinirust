@@ -18,7 +18,7 @@ pub fn spawn_warriors(
     let mut rng = rand::rng();
 
     for _ in 0..5 {
-        let angle: f32 = rng.random_range(0.0..360.0);
+        let angle: f32 = rng.random_range(0.0_f32..360.0).to_radians();
         let position = Vec3::new(1000.0 * angle.sin(), 1000.0 * angle.cos(), 0.0);
 
         commands.spawn((

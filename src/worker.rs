@@ -1,5 +1,5 @@
+use crate::{crystal::*, health::*, navigation::*, physics::*, sinistar::*, team::*};
 use bevy::prelude::*;
-use crate::{health::*, navigation::*, physics::*, team::*, crystal::*};
 use rand::prelude::*;
 
 #[derive(Component)]
@@ -44,12 +44,12 @@ pub fn spawn_workers(
             Velocity(Vec2::ZERO),
             Collider { radius: 12.0 },
             Mass(5.0),
-            Mesh2d(meshes.add(RegularPolygon::new(12.0, 6))), 
+            Mesh2d(meshes.add(RegularPolygon::new(12.0, 6))),
             MeshMaterial2d(materials.add(ColorMaterial::from(Color::srgb(0.9, 0.1, 0.1)))),
             Transform::from_xyz(p_x, p_y, 0.0),
             Health(1),
             Team::Enemy,
-            HasCrystal(false)
+            HasCrystal(false),
         ));
     }
 }
@@ -77,17 +77,25 @@ pub fn worker_roaming_ai(
 pub fn worker_sensor_ai(
     mut commands: Commands,
     // We must query for &HasCrystal to check the bool, rather than using Without<HasCrystal>
-    mut worker_query: Query<(Entity, &Transform, &WorkerStats, &mut WorkerState, &HasCrystal), With<Worker>>,
+    mut worker_query: Query<
+        (
+            Entity,
+            &Transform,
+            &WorkerStats,
+            &mut WorkerState,
+            &HasCrystal,
+        ),
+        With<Worker>,
+    >,
     crystal_query: Query<&Transform, With<Crystal>>,
 ) {
     for (entity, worker_tf, stats, mut state, has_crystal) in &mut worker_query {
         // Only look for crystals if we are roaming or already collecting (to update target)
         // AND we don't currently have a crystal.
         if !has_crystal.0 && matches!(*state, WorkerState::Roaming | WorkerState::Collecting) {
-            
             let worker_pos = worker_tf.translation.truncate();
             let mut closest_crystal_pos: Option<Vec2> = None;
-            
+
             // The prompt requested a 200 unit detection trigger
             let mut closest_dist = 200.0_f32.min(stats.detection_radius);
 
@@ -105,9 +113,9 @@ pub fn worker_sensor_ai(
                 // Determine logic: State switch
                 // If we found a crystal, we are now Collecting
                 if *state != WorkerState::Collecting {
-                   *state = WorkerState::Collecting;
+                    *state = WorkerState::Collecting;
                 }
-                
+
                 // Update the moving target to the crystal's position
                 commands.entity(entity).insert(NavigationTarget(target_pos));
             } else if *state == WorkerState::Collecting {
@@ -120,10 +128,101 @@ pub fn worker_sensor_ai(
     }
 }
 
+pub fn worker_returning_ai(
+    mut commands: Commands,
+    mut workers: Query<
+        (Entity, &Transform, &WorkerState, &HasCrystal),
+        (With<Worker>, Without<NavigationTarget>),
+    >,
+    sinistars: Query<&Transform, With<Sinistar>>,
+) {
+    for (entity, worker_tf, state, has_crystal) in &mut workers {
+        if *state != WorkerState::Returning || !has_crystal.0 {
+            continue;
+        }
+
+        let worker_pos = worker_tf.translation.truncate();
+
+        let mut closest: Option<Vec2> = None;
+        let mut closest_dist_sq = f32::MAX;
+        for sin_tf in &sinistars {
+            let sin_pos = sin_tf.translation.truncate();
+            let dist_sq = worker_pos.distance_squared(sin_pos);
+
+            if dist_sq < closest_dist_sq {
+                closest_dist_sq = dist_sq;
+                closest = Some(sin_pos);
+            }
+        }
+
+        if let Some(target) = closest {
+            commands.entity(entity).insert(NavigationTarget(target));
+        }
+    }
+}
+
+pub fn worker_return_deposit(
+    mut commands: Commands,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<ColorMaterial>>,
+    mut workers: Query<
+        (
+            Entity,
+            &Transform,
+            &Collider,
+            &mut WorkerState,
+            &mut HasCrystal,
+        ),
+        With<Worker>,
+    >,
+    sinistars: Query<(Entity, &Transform, &Collider), With<Sinistar>>,
+    existing_pieces: Query<(&SinistarPiece, &ChildOf)>,
+) {
+    for (worker_entity, worker_tf, worker_col, mut state, mut has_crystal) in &mut workers {
+        if *state != WorkerState::Returning || !has_crystal.0 {
+            continue;
+        }
+
+        let worker_pos = worker_tf.translation.xy();
+
+        for (sin_entity, sin_tf, sin_col) in &sinistars {
+            let sin_pos = sin_tf.translation.xy();
+            let dist_sq = worker_pos.distance_squared(sin_pos);
+            let radius = worker_col.radius + sin_col.radius;
+            if dist_sq <= radius * radius {
+                has_crystal.0 = false;
+
+                add_pieces(
+                    &mut commands,
+                    sin_entity,
+                    &mut meshes,
+                    &mut materials,
+                    &existing_pieces,
+                    Some(1),
+                );
+
+                *state = WorkerState::Roaming;
+                commands.entity(worker_entity).remove::<NavigationTarget>();
+
+                break;
+            }
+        }
+    }
+}
+
 pub fn worker_movement(
     mut commands: Commands,
     time: Res<Time>,
-    mut query: Query<(Entity, &mut Transform, &mut Velocity, &WorkerStats, &NavigationTarget), With<Worker>>,
+    mut query: Query<
+        (
+            Entity,
+            &mut Transform,
+            &mut Velocity,
+            &WorkerStats,
+            &NavigationTarget,
+        ),
+        With<Worker>,
+    >,
 ) {
     let dt = time.delta_secs();
 
