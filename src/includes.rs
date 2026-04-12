@@ -8,8 +8,8 @@ pub const PLAYER_DAMPING: f32 = 0.985;
 pub const WORLD_WIDTH: f32 = 4000.0;
 pub const WORLD_HEIGHT: f32 = 4000.0;
 
-#[derive(Resource, Default)]
-pub struct GameScore(pub u32, pub u32);
+#[derive(Component)]
+pub struct MainCamera;
 
 #[derive(Resource, Default)]
-pub struct Sinibombs(pub u32);
+pub struct GameScore(pub u32, pub u32);

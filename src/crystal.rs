@@ -3,6 +3,7 @@ use rand::prelude::*;
 use crate::physics::*;
 use crate::player::*;
 use crate::includes::*;
+use crate::sinibomb::*;
 use crate::worker::*;
 use crate::navigation::*;
 use std::collections::HashSet;

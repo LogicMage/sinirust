@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::includes::*;
+use crate::{includes::*,sinibomb::*};
 
 #[derive(Component)]
 pub struct ScoreText;
