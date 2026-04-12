@@ -71,6 +71,7 @@ pub fn projectile_system(
     mut projectiles: Query<(Entity, &Transform, &mut Projectile, &Velocity)>,
     mut targets: Query<(Entity, &Transform, &Collider, &mut Health, &Team, Option<&Asteroid>)>,
     mut score: ResMut<GameScore>,
+    sounds: Res<AudioAssets>,
 ) {
     for (projectile_entity, proj_transform, mut projectile, proj_vel) in &mut projectiles {
         projectile.lifetime -= time.delta_secs();
@@ -113,6 +114,8 @@ pub fn projectile_system(
                     commands.entity(target_entity).despawn();
                     score.0 += 100;
                 }
+
+                commands.spawn(AudioPlayer::new(sounds.explode.clone()));
 
                 break; 
             }
