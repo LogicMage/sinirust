@@ -5,12 +5,14 @@ use bevy::audio::*;
 pub struct AudioAssets {
     pub music: Handle<AudioSource>,
     pub shoot: Handle<AudioSource>,
+    pub launch: Handle<AudioSource>,
 }
 
 pub fn load_sounds(mut commands: Commands, asset_server: Res<AssetServer>) {
     commands.insert_resource(AudioAssets {
         music: asset_server.load("audio/music.ogg"),
         shoot: asset_server.load("audio/shoot.ogg"),
+        launch: asset_server.load("audio/shoot.ogg"), // TODO: Get different sound for launch
     });
 }
 

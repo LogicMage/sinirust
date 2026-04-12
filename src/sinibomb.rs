@@ -2,9 +2,10 @@ use core::f32;
 
 use bevy::prelude::*;
 
-use crate::{audio::*, health::*, physics::*};
+use crate::{audio::*, physics::*};
 
-const SPEED: f32 = 10.;
+// const SPEED: f32 = 10.;
+// const RADIUS: f32 = 5.;
 
 #[derive(Resource, Default)]
 pub struct Sinibombs {
@@ -18,10 +19,7 @@ pub struct Launcher {
 }
 
 #[derive(Component)]
-pub struct Sinibomb {
-    pub radius: f32,
-    pub damage: i32,
-}
+pub struct Sinibomb;
 
 #[derive(Message)]
 pub struct LaunchMessage {
@@ -53,17 +51,14 @@ pub fn launcher_system(
             }
 
             commands.spawn((
+                Sinibomb,
                 Transform::from_translation(transform.translation),
-                Sinibomb {
-                    radius: 5.0,
-                    damage: 1,
-                },
                 Velocity(Vec2::ZERO),
                 Mesh2d(meshes.add(Circle::new(5.0))),
                 MeshMaterial2d(materials.add(ColorMaterial::from(Color::srgb(0.5, 0.5, 1.0)))),
             ));
 
-            commands.spawn(AudioPlayer::new(sounds.shoot.clone()));
+            commands.spawn(AudioPlayer::new(sounds.launch.clone()));
             sinibombs.count -= 1;
 
             launcher.timer = launcher.cooldown;

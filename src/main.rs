@@ -9,6 +9,7 @@ mod physics;
 mod player;
 mod shooting;
 mod sinibomb;
+mod sinistar;
 mod team;
 mod ui;
 mod warrior;
@@ -25,6 +26,7 @@ use physics::*;
 use player::*;
 use shooting::*;
 use sinibomb::*;
+use sinistar::*;
 use ui::*;
 use warrior::*;
 use worker::*;
@@ -64,6 +66,7 @@ fn main() {
             spawn_asteroids,
             spawn_workers,
             spawn_warriors,
+            spawn_sinistar,
             setup_score_ui,
         )
             .chain(),

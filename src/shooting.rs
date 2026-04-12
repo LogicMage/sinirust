@@ -81,8 +81,6 @@ pub fn projectile_system(
 
         let proj_pos = proj_transform.translation.truncate();
         
-        let mut hit_something = false;
-
         for (target_entity, target_transform, target_collider,
             mut target_health, target_team, asteroid_opt) in &mut targets {
             if projectile.team == Team::None || projectile.team == *target_team {
@@ -96,7 +94,6 @@ pub fn projectile_system(
             if dist < min_dist {
                 //despawn bullet
                 commands.entity(projectile_entity).despawn();
-                hit_something = true;
 
                 //damage target
                 target_health.0 -= projectile.damage;

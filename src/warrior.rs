@@ -18,11 +18,11 @@ pub fn spawn_warriors(
     let mut rng = rand::rng();
 
     for _ in 0..5 {
-        let p_x = rng.random_range(-1000.0..1000.0);
-        let p_y = rng.random_range(-1000.0..1000.0);
+        let angle: f32 = rng.random_range(0.0..360.0);
+        let position = Vec3::new(1000.0 * angle.sin(), 1000.0 * angle.cos(), 0.0);
 
         commands.spawn((
-            Transform::from_xyz(p_x, p_y, 0.0),
+            Transform::from_translation(position),
             Warrior {
                 acceleration: 200.0,
                 detection_radius: 500.0,
