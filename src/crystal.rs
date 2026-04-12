@@ -50,7 +50,7 @@ pub fn crystal_impacts(
 
             if distance < 30.0 {
                 score.0 += 200;
-                sinibombs.0 += 1;
+                sinibombs.count += 1;
                 commands.entity(crystal_entity).despawn();
                 taken_crystals.insert(crystal_entity);
             }

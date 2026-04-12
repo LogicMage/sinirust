@@ -58,7 +58,7 @@ pub fn update_score_text(
     }
     if sini.is_changed() {
         for mut text in &mut queries.p1() {
-            text.0 = format!("Sinibombs: {}", sini.0);
+            text.0 = format!("Sinibombs: {}", sini.count);
         }
     }
 }

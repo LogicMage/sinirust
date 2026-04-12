@@ -1,6 +1,9 @@
 use bevy::prelude::*;
 
-use crate::{health::*, physics::*, shooting::*, team::*};
+use crate::{health::*, physics::*, shooting::*, sinibomb::Launcher, team::*};
+
+pub const PLAYER_ROT_SPEED: f32 = 3.5;
+pub const PLAYER_DAMPING: f32 = 0.985;
 
 #[derive(Component)]
 pub struct Player
@@ -33,6 +36,10 @@ pub fn spawn_player(commands: &mut Commands, mut meshes: ResMut<Assets<Mesh>>, m
             cooldown: 0.5,
             timer: 0.0,
             projectile_speed: 1000.0,
+        },
+        Launcher {
+            cooldown: 1.,
+            timer: 0.
         },
         Health(1),
         Team::Player,

@@ -102,7 +102,7 @@ pub fn projectile_system(
                 target_health.0 -= projectile.damage;
 
                 if asteroid_opt.is_some() {
-                    let impact_dir = proj_vel.0.normalize_or_zero() * 50.0;
+                    let impact_dir = -proj_vel.0.normalize_or_zero() * 50.0;
                     spawn_crystal(
                         &mut commands,
                         &mut meshes,
@@ -119,10 +119,6 @@ pub fn projectile_system(
 
                 break; 
             }
-        }
-        
-        if hit_something {
-            continue;
         }
     }
 }

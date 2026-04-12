@@ -80,9 +80,10 @@ fn main() {
             apply_velocity,
             handle_collisions,
             crystal_impacts,
-            player_shooting_input,
+            player_weapon_input,
             gun_system,
             projectile_system,
+            launcher_system,
             update_score_text,
             camera_follow,
             wrap_around_camera,
@@ -91,6 +92,7 @@ fn main() {
             .run_if(in_state(GameState::InGame)),
     )
     .add_message::<ShootMessage>()
+    .add_message::<LaunchMessage>()
     .run();
 }
 
@@ -113,17 +115,17 @@ fn player_movement_input(
     if let Ok((mut transform, player, mut velocity)) = query.single_mut() {
         let dt = time.delta_secs();
 
-        if keyboard.pressed(KeyCode::KeyA) {
+        if keyboard.pressed(KeyCode::ArrowLeft) {
             transform.rotate_z(PLAYER_ROT_SPEED * dt);
         }
-        if keyboard.pressed(KeyCode::KeyD) {
+        if keyboard.pressed(KeyCode::ArrowRight) {
             transform.rotate_z(-PLAYER_ROT_SPEED * dt);
         }
-        if keyboard.pressed(KeyCode::KeyW) {
+        if keyboard.pressed(KeyCode::ArrowUp) {
             let forward = (transform.rotation * Vec3::Y).truncate();
             **velocity += forward * player.speed * dt;
         }
-        if keyboard.pressed(KeyCode::KeyS) {
+        if keyboard.pressed(KeyCode::ArrowDown) {
             let backward = (transform.rotation * Vec3::Y).truncate();
             **velocity -= backward * (player.speed * 0.5) * dt;
         }
@@ -132,14 +134,21 @@ fn player_movement_input(
     }
 }
 
-fn player_shooting_input(
+fn player_weapon_input(
     keyboard: Res<ButtonInput<KeyCode>>,
     query: Query<Entity, With<Player>>,
-    mut writer: MessageWriter<ShootMessage>,
+    mut shoot_writer: MessageWriter<ShootMessage>,
+    mut launch_writer: MessageWriter<LaunchMessage>,
 ) {
-    if keyboard.pressed(KeyCode::Space) {
+    if keyboard.pressed(KeyCode::KeyZ) {
         if let Ok(entity) = query.single() {
-            writer.write(ShootMessage { entity });
+            shoot_writer.write(ShootMessage { entity });
+        }
+    }
+
+    if keyboard.pressed(KeyCode::KeyX) {
+        if let Ok(entity) = query.single() {
+            launch_writer.write(LaunchMessage { entity });
         }
     }
 }
