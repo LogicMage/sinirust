@@ -1,4 +1,4 @@
-use crate::{crystal::*, health::*, navigation::*, physics::*, sinistar::*, team::*};
+use crate::{audio::AudioAssets, crystal::*, health::*, navigation::*, physics::*, sinistar::*, team::*};
 use bevy::prelude::*;
 use rand::prelude::*;
 
@@ -38,7 +38,7 @@ pub fn spawn_workers(
             Worker,
             WorkerState::default(),
             WorkerStats {
-                speed: 200.0,
+                speed: 500.0,
                 detection_radius: 400.0,
             },
             Velocity(Vec2::ZERO),
@@ -142,7 +142,6 @@ pub fn worker_returning_ai(
         }
 
         let worker_pos = worker_tf.translation.truncate();
-
         let mut closest: Option<Vec2> = None;
         let mut closest_dist_sq = f32::MAX;
         for sin_tf in &sinistars {
@@ -163,6 +162,7 @@ pub fn worker_returning_ai(
 
 pub fn worker_return_deposit(
     mut commands: Commands,
+    sounds: Res<AudioAssets>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<ColorMaterial>>,
     mut workers: Query<
@@ -175,7 +175,7 @@ pub fn worker_return_deposit(
         ),
         With<Worker>,
     >,
-    sinistars: Query<(Entity, &Transform, &Collider), With<Sinistar>>,
+    mut sinistars: ParamSet<(Query<(Entity, &Transform, &Collider), With<Sinistar>>, Query<&mut Sinistar>)>,
     existing_pieces: Query<(&SinistarPiece, &ChildOf)>,
 ) {
     for (worker_entity, worker_tf, worker_col, mut state, mut has_crystal) in &mut workers {
@@ -185,7 +185,7 @@ pub fn worker_return_deposit(
 
         let worker_pos = worker_tf.translation.xy();
 
-        for (sin_entity, sin_tf, sin_col) in &sinistars {
+        for (sin_entity, sin_tf, sin_col) in &sinistars.p0() {
             let sin_pos = sin_tf.translation.xy();
             let dist_sq = worker_pos.distance_squared(sin_pos);
             let radius = worker_col.radius + sin_col.radius;
@@ -194,9 +194,11 @@ pub fn worker_return_deposit(
 
                 add_pieces(
                     &mut commands,
+                    &sounds,
                     sin_entity,
                     &mut meshes,
                     &mut materials,
+                    &mut sinistars.p1(),
                     &existing_pieces,
                     Some(1),
                 );

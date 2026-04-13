@@ -8,6 +8,7 @@ pub struct AudioAssets {
     pub shoot: Handle<AudioSource>,
     pub launch: Handle<AudioSource>,
     pub explode: Handle<AudioSource>,
+    pub beware: Handle<AudioSource>,
 }
 
 pub fn load_sounds(mut commands: Commands, asset_server: Res<AssetServer>) {
@@ -16,6 +17,7 @@ pub fn load_sounds(mut commands: Commands, asset_server: Res<AssetServer>) {
         shoot: asset_server.load("audio/shoot.ogg"),
         launch: asset_server.load("audio/launch.ogg"),
         explode: asset_server.load("audio/explode.ogg"),
+        beware: asset_server.load("audio/beware.ogg"),
     });
 }
 

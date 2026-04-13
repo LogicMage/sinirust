@@ -46,17 +46,13 @@ fn main() {
     .init_state::<GameState>()
     .init_resource::<GameScore>()
     .init_resource::<Sinibombs>()
-
     //menu
     .add_systems(OnEnter(GameState::Menu), setup_menu)
     .add_systems(
-    Update,
-    IntoScheduleConfigs::into_configs(menu_interactions)
-        .run_if(in_state(GameState::Menu)),
-        
+        Update,
+        IntoScheduleConfigs::into_configs(menu_interactions).run_if(in_state(GameState::Menu)),
     )
     .add_systems(OnExit(GameState::Menu), cleanup_menu)
-
     // GAME
     .add_systems(
         OnEnter(GameState::InGame),
@@ -75,21 +71,24 @@ fn main() {
         Update,
         (
             player_movement_input,
-            worker_roaming_ai,
-            worker_sensor_ai,
-            worker_returning_ai,
-            worker_return_deposit,
-            worker_movement,
-            warrior_ai,
-            warrior_movement,
-            apply_velocity,
-            handle_collisions,
-            crystal_impacts,
             player_weapon_input,
+            (
+                worker_roaming_ai,
+                worker_sensor_ai,
+                worker_returning_ai,
+                worker_return_deposit,
+                worker_movement,
+            )
+                .chain(),
+            (warrior_ai, warrior_movement).chain(),
+            sinistar_chase,
+            crystal_impacts,
             gun_system,
             projectile_system,
             launcher_system,
             bomb_system,
+            apply_velocity,
+            handle_collisions,
             update_score_text,
             camera_follow,
             wrap_around_camera,

@@ -67,7 +67,10 @@ pub fn launcher_system(
 pub fn bomb_system(
     mut commands: Commands,
     mut sinibombs: Query<(Entity, &Transform, &mut Velocity), With<Sinibomb>>,
-    sinistars: Query<(Entity, &Sinistar, &Transform, &Collider)>,
+    mut sinistars: ParamSet<(
+        Query<(Entity, &Sinistar, &Transform, &Collider)>,
+        Query<&mut Sinistar>,
+    )>,
     colliders: Query<(Entity, &Transform, &Collider)>,
     pieces: Query<(Entity, &ChildOf), With<SinistarPiece>>,
     teams: Query<&Team>,
@@ -76,7 +79,7 @@ pub fn bomb_system(
         let bomb_position = bomb_transform.translation.xy();
         let mut closest: Option<(Entity, Vec2)> = None;
         let mut closest_dist_sq = f32::MAX;
-        for (sin_entity, _, sin_transform, _) in &sinistars {
+        for (sin_entity, _, sin_transform, _) in &sinistars.p0() {
             let sin_pos = sin_transform.translation.xy();
             let dist_sq = bomb_position.distance_squared(sin_pos);
 
@@ -103,8 +106,14 @@ pub fn bomb_system(
                     continue;
                 }
 
-                if let Ok((sin_entity, _, _, _)) = sinistars.get(collider_entity) {
-                    remove_pieces(&mut commands, sin_entity, &pieces, Some(1));
+                if let Ok((sin_entity, _, _, _)) = sinistars.p0().get(collider_entity) {
+                    remove_pieces(
+                        &mut commands,
+                        sin_entity,
+                        &mut sinistars.p1(),
+                        &pieces,
+                        Some(1),
+                    );
                 }
                 commands.entity(sinibomb_entity).despawn();
 
